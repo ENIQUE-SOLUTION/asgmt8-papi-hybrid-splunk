@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd">
+	<http:request-config name="HTTP_Request_configuration">
+		<http:request-connection host="localhost" port="8061" />
+	</http:request-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="15b8dfd5-644f-45e6-9152-413f346605bd" >
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="346dbe74-4110-41ec-9e0d-13ec11cb0364" file="config.yaml" />
+	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="f7bb4b7e-4879-4a3d-bb1e-26615ecf870d" environment="${mule.env}" >
+		<json-logger:external-destination >
+			<json-logger:jms-destination jmsConfigurationRef="JMS_Config" queueDestination="asgmt8-papi-hybrid" />
+		</json-logger:external-destination>
+	</json-logger:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="7c44e666-9213-45a1-8f22-93d108619e13" file="log.properties" />
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="96b9a324-894d-45aa-9e25-264c61192fbd" >
+		<jms:active-mq-connection username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
+	<flow name="asgmt8-papiFlow" doc:id="01bbf801-bbd3-4125-8dd7-da66a05d131d" >
+		<http:listener doc:name="HTTP:8062/asgmt8-papi" doc:id="b424e20d-8208-44b5-a724-ded4d814dc38" config-ref="HTTP_Listener_config" path="/asgmt8-papi">
+		</http:listener>
+		<ee:transform doc:name="All USERID's in payload and variable" doc:id="bac00afc-c280-41b6-959f-9c46c6eacb9a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"USERID1":attributes.queryParams.USERID1 default "",
+	"USERID2":attributes.queryParams.USERID2 default "",
+	"USERID3":attributes.queryParams.USERID3 default ""
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="USERID1" ><![CDATA[attributes.queryParams.USERID1 default ""]]></ee:set-variable>
+				<ee:set-variable variableName="USERID2" ><![CDATA[attributes.queryParams.USERID2 default ""]]></ee:set-variable>
+				<ee:set-variable variableName="USERID3" ><![CDATA[attributes.queryParams.USERID3 default ""]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<validation:is-true doc:name="Is true for 3 USERID's" doc:id="17284a26-30a8-43bb-96af-a7116c76fe69" expression='#[(vars.USERID1 != null and trim(vars.USERID1 !=""))  or (vars.USERID2 != null and trim(vars.USERID2 !=""))  or (vars.USERID3 != null and trim(vars.USERID3 !="")) ]' message='#[" Value for at least one USERID should be present in the request"]'/>
+		<http:request method="GET" doc:name="HTTP:8061/api/details" doc:id="ec3d8df1-b417-4be4-9837-22b613951696" config-ref="HTTP_Request_configuration" path="/api/details">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	USERID2 : vars.USERID2,
+	USERID3 : vars.USERID3,
+	USERID1 : vars.USERID1
+}]]]></http:query-params>
+		</http:request>
+		<json-logger:logger doc:name="JSON_Logger_queue_asgmt8-papi-hybrid" doc:id="6aab7ea6-0b04-4429-9b4d-e02b8881c09f" config-ref="JSON_Logger_Config" message="papi_logger"/>
+		<logger level="INFO" doc:name="payload" doc:id="8e55975b-5714-4c1a-9eb0-8162878a5cf1" message="#[payload]"/>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0b22199f-7568-42ea-923b-5d544ca2db3c" type="VALIDATION:INVALID_BOOLEAN">
+				<ee:transform doc:name="error and message" doc:id="6007091d-d02c-4ff5-b661-90fba9605523">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": error.description,
+	"Message": "Value for at least one USERID should be present in the request"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<logger level="INFO" doc:name="payload" doc:id="7253ffda-fa3c-4bbd-9e12-1c1e0511feb8" message="#[payload]"/>
+			</on-error-continue>
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="79f4f5e3-5df0-47dc-a61a-58297b400107" type="ANY">
+				<ee:transform doc:name='error and message' doc:id="9bca6f8e-0996-4a1f-ab00-1cdfd2a177b7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+error.muleMessage.typedValue default error.description
+]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="statusCode" ><![CDATA[400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<logger level="INFO" doc:name="payload" doc:id="7d8408bd-314c-448e-b8be-e5c7a1ea83f5" message="#[payload]"/>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+</mule>
