@@ -17,7 +17,7 @@ http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/m
 	<configuration-properties doc:name="Configuration properties" doc:id="346dbe74-4110-41ec-9e0d-13ec11cb0364" file="config.yaml" />
 	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="f7bb4b7e-4879-4a3d-bb1e-26615ecf870d" environment="${mule.env}" >
 		<json-logger:external-destination >
-			<json-logger:jms-destination jmsConfigurationRef="JMS_Config" queueDestination="asgmt8-papi-hybrid" />
+			<json-logger:jms-destination jmsConfigurationRef="JMS_Config" queueDestination="asgmt8-papi-hybrid-wrongUSERID" />
 		</json-logger:external-destination>
 	</json-logger:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="7c44e666-9213-45a1-8f22-93d108619e13" file="log.properties" />
@@ -86,6 +86,7 @@ error.muleMessage.typedValue default error.description
 						<ee:set-variable variableName="statusCode" ><![CDATA[400]]></ee:set-variable>
 					</ee:variables>
 				</ee:transform>
+				<json-logger:logger doc:name="wrong USERID Logger" doc:id="eb42917c-131a-463b-a31d-2cc9f3630af9" config-ref="JSON_Logger_Config" message="wrong USERID"/>
 				<logger level="INFO" doc:name="payload" doc:id="7d8408bd-314c-448e-b8be-e5c7a1ea83f5" message="#[payload]"/>
 			</on-error-continue>
 		</error-handler>
