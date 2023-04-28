@@ -17,7 +17,7 @@ http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/m
 	<configuration-properties doc:name="Configuration properties" doc:id="346dbe74-4110-41ec-9e0d-13ec11cb0364" file="config.yaml" />
 	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="f7bb4b7e-4879-4a3d-bb1e-26615ecf870d" environment="${mule.env}" >
 		<json-logger:external-destination >
-			<json-logger:jms-destination jmsConfigurationRef="JMS_Config" queueDestination="asgmt8-papi-hybrid-wrongUSERID" />
+			<json-logger:jms-destination jmsConfigurationRef="JMS_Config" queueDestination="asgmt8-papi-hybrid" />
 		</json-logger:external-destination>
 	</json-logger:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="7c44e666-9213-45a1-8f22-93d108619e13" file="log.properties" />
@@ -26,6 +26,16 @@ http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/m
 			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
 		</jms:active-mq-connection>
 	</jms:config>
+	<jms:config name="JMS_Config1" doc:name="JMS Config" doc:id="5dc61422-4609-47ab-91d7-7157e1a8a577" >
+		<jms:active-mq-connection username="admin" password="admin" >
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616" />
+		</jms:active-mq-connection>
+	</jms:config>
+	<json-logger:config name="JSON_Logger_Config1" doc:name="JSON Logger Config" doc:id="df0e8e21-fe1c-474c-be18-8379871d8781" environment="${mule.env}" >
+		<json-logger:external-destination >
+			<json-logger:jms-destination jmsConfigurationRef="JMS_Config1" queueDestination="asgmt8-papi-hybrid-wrongUSERID" />
+		</json-logger:external-destination>
+	</json-logger:config>
 	<flow name="asgmt8-papiFlow" doc:id="01bbf801-bbd3-4125-8dd7-da66a05d131d" >
 		<http:listener doc:name="HTTP:8062/asgmt8-papi" doc:id="b424e20d-8208-44b5-a724-ded4d814dc38" config-ref="HTTP_Listener_config" path="/asgmt8-papi">
 		</http:listener>
@@ -86,7 +96,7 @@ error.muleMessage.typedValue default error.description
 						<ee:set-variable variableName="statusCode" ><![CDATA[400]]></ee:set-variable>
 					</ee:variables>
 				</ee:transform>
-				<json-logger:logger doc:name="wrong USERID Logger" doc:id="eb42917c-131a-463b-a31d-2cc9f3630af9" config-ref="JSON_Logger_Config" message="wrong USERID"/>
+				<json-logger:logger doc:name="wrong USERID Logger" doc:id="eb42917c-131a-463b-a31d-2cc9f3630af9" config-ref="JSON_Logger_Config1" message="wrong USERID"/>
 				<logger level="INFO" doc:name="payload" doc:id="7d8408bd-314c-448e-b8be-e5c7a1ea83f5" message="#[payload]"/>
 			</on-error-continue>
 		</error-handler>
